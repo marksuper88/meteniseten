@@ -125,11 +125,9 @@ useEffect(() => {
     md:${isSticky ? 'opacity-100' : 'opacity-0 pointer-events-none'}
   `}
 >
-  <img
-    src="https://rqkpxvhmjibpeqkvmgmc.supabase.co/storage/v1/object/public/layout-images/Lets_Denz_text.png"
-    alt="Let's Denz"
-    className="h-full max-h-14 w-auto object-contain"
-  />
+  <span className="h-full max-h-14 flex items-center font-extrabold text-3xl leading-none tracking-tight uppercase">
+  METEN=ETEN
+</span>
 </Link>
 
           {/* DESKTOP DASHBOARD */}

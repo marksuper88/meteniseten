@@ -1,7 +1,7 @@
 'use client'
 
 const HEADER_IMAGE_URL =
-  'https://rqkpxvhmjibpeqkvmgmc.supabase.co/storage/v1/object/public/layout-images/Lets_Denz.jpeg'
+  'https://frxvdjqqsgdynkktbvim.supabase.co/storage/v1/object/public/layout/scale.png'
 
 export default function Header() {
   return (
