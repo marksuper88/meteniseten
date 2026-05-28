@@ -222,7 +222,7 @@ export default function MyWeightPage() {
   {/* WEIGHT INPUT */}
   <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4 min-w-0">
 
-    <h2 className="font-bold text-lg">Chat neemt me in de maling</h2>
+    <h2 className="font-bold text-lg">Voer je gewicht in</h2>
 
     {/* DATE */}
     <div className="w-full min-w-0">
@@ -261,14 +261,14 @@ export default function MyWeightPage() {
       disabled={loading}
       className="bg-orange-500 text-white px-4 py-2 rounded w-fit"
     >
-      {loading ? "Saving..." : "Save"}
+      {loading ? "Saving..." : "Opslaan"}
     </button>
 
   </div>
 
         {/* TARGET WEIGHT */}
         <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4">
-          <h2 className="font-bold text-lg">Target weight</h2>
+          <h2 className="font-bold text-lg">Stel een doel in</h2>
 
           <input
             type="number"

@@ -4,8 +4,12 @@ import { usePathname } from 'next/navigation'
 
 const titles: Record<string, string> = {
   '/': "Home",
-  '/my-weight' : "Mijn gewicht",
   '/profile': 'Mijn profiel',
+  '/login': 'Login',
+  '/sign-up' : 'Account aanmaken',
+  '/my-weight' : 'Mijn gewicht',
+  '/my-intake' : 'Mijn voeding',
+  '/my-activity' : 'Mijn activiteit',
 }
 
 export default function PageTitle() {

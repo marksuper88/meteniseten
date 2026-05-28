@@ -42,7 +42,7 @@ const handleSignup = async () => {
 }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-orange-100">
+    <div className="min-h-screen flex items-center justify-center bg-blue-100">
 
       {/* LOGIN CARD */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
