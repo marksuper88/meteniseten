@@ -217,43 +217,54 @@ export default function MyWeightPage() {
       {/* =========================
           INPUT + TARGET WEIGHT
       ========================= */}
-      <div className="flex flex-col md:flex-row gap-4">
+<div className="flex flex-col md:flex-row gap-4 w-full overflow-x-hidden">
 
-        {/* WEIGHT INPUT */}
-        <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4">
-          <h2 className="font-bold text-lg">Weight input</h2>
+  {/* WEIGHT INPUT */}
+  <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4 min-w-0">
 
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4 overflow-hidden"
-          />
+    <h2 className="font-bold text-lg">Weight input</h2>
 
-          <input
-            type="number"
-            placeholder="Morning weight"
-            value={morning}
-            onChange={(e) => setMorning(e.target.value)}
-            className="w-full border p-2 rounded"
-          />
+    {/* DATE */}
+    <div className="w-full min-w-0">
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="w-full block min-w-0 max-w-full border p-2 rounded box-border appearance-none"
+      />
+    </div>
 
-          <input
-            type="number"
-            placeholder="Night weight"
-            value={night}
-            onChange={(e) => setNight(e.target.value)}
-            className="w-full border p-2 rounded"
-          />
+    {/* MORNING */}
+    <div className="w-full min-w-0">
+      <input
+        type="number"
+        placeholder="Morning weight"
+        value={morning}
+        onChange={(e) => setMorning(e.target.value)}
+        className="w-full block min-w-0 max-w-full border p-2 rounded box-border"
+      />
+    </div>
 
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="bg-orange-500 text-white px-4 py-2 rounded w-fit"
-          >
-            {loading ? "Saving..." : "Save"}
-          </button>
-        </div>
+    {/* NIGHT */}
+    <div className="w-full min-w-0">
+      <input
+        type="number"
+        placeholder="Night weight"
+        value={night}
+        onChange={(e) => setNight(e.target.value)}
+        className="w-full block min-w-0 max-w-full border p-2 rounded box-border"
+      />
+    </div>
+
+    <button
+      onClick={handleSave}
+      disabled={loading}
+      className="bg-orange-500 text-white px-4 py-2 rounded w-fit"
+    >
+      {loading ? "Saving..." : "Save"}
+    </button>
+
+  </div>
 
         {/* TARGET WEIGHT */}
         <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4">
