@@ -222,7 +222,7 @@ export default function MyWeightPage() {
   {/* WEIGHT INPUT */}
   <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4 min-w-0">
 
-    <h2 className="font-bold text-lg">Weight input</h2>
+    <h2 className="font-bold text-lg">Chat neemt me in de maling</h2>
 
     {/* DATE */}
     <div className="w-full min-w-0">
