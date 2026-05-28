@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation'
 const ADMIN_EMAIL = 'marksuper88@gmail.com'
 
 const MOBILE_LOGO_URL =
-  'https://rqkpxvhmjibpeqkvmgmc.supabase.co/storage/v1/object/public/layout-images/Lets_Denz.jpeg'
+  'https://frxvdjqqsgdynkktbvim.supabase.co/storage/v1/object/public/layout/1080x1080.png'
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
@@ -126,7 +126,7 @@ useEffect(() => {
   `}
 >
   <span className="h-full max-h-14 flex items-center font-extrabold text-3xl leading-none tracking-tight uppercase">
-  METEN=ETEN
+  KOERS
 </span>
 </Link>
 

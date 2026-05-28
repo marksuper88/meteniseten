@@ -8,14 +8,24 @@ type Profile = {
   email: string
   username: string | null
   profile_picture?: string | null
+
+  intake?: boolean
+  weight?: boolean
+  sleep?: boolean
+  activity?: boolean
 }
 
 export default function ProfilePage() {
   const { user, loading } = useAuth()
+
   const [profile, setProfile] = useState<Profile>({
     email: '',
     username: '',
     profile_picture: '',
+    intake: true,
+    weight: true,
+    sleep: true,
+    activity: true,
   })
 
   const [initialProfile, setInitialProfile] = useState<Profile | null>(null)
@@ -38,18 +48,23 @@ export default function ProfilePage() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('email, username, profile_picture')
+        .select('email, username, profile_picture, intake, weight, sleep, activity')
         .eq('user_id', user.id)
         .single()
 
       if (error && error.code !== 'PGRST116') {
         setError(error.message)
       } else if (data) {
-   const loaded = {
-  email: data.email ?? user.email ?? '',
-  username: data.username ?? '',
-  profile_picture: data.profile_picture ?? '',
-}
+        const loaded = {
+          email: data.email ?? user.email ?? '',
+          username: data.username ?? '',
+          profile_picture: data.profile_picture ?? '',
+
+          intake: data.intake ?? true,
+          weight: data.weight ?? true,
+          sleep: data.sleep ?? true,
+          activity: data.activity ?? true,
+        }
 
         setProfile(loaded)
         setInitialProfile(loaded)
@@ -57,6 +72,11 @@ export default function ProfilePage() {
         const empty = {
           email: user.email ?? '',
           username: '',
+          profile_picture: '',
+          intake: true,
+          weight: true,
+          sleep: true,
+          activity: true,
         }
 
         setProfile(empty)
@@ -81,10 +101,13 @@ export default function ProfilePage() {
     setMessage(null)
     setError(null)
 
-    // ✅ FIX: check of er echt iets veranderd is
-const hasChanges =
-  profile.username !== initialProfile.username ||
-  file !== null
+    const hasChanges =
+      profile.username !== initialProfile.username ||
+      file !== null ||
+      profile.intake !== initialProfile.intake ||
+      profile.weight !== initialProfile.weight ||
+      profile.sleep !== initialProfile.sleep ||
+      profile.activity !== initialProfile.activity
 
     if (!hasChanges) {
       setError('No changes detected.')
@@ -93,54 +116,58 @@ const hasChanges =
     }
 
     let uploadedUrl = profile.profile_picture
+
     if (file) {
-  const fileName = `${user.id}-${Date.now()}`
+      const fileName = `${user.id}-${Date.now()}`
 
-  const { error: uploadError } = await supabase.storage
-    .from('profile_picture')
-    .upload(fileName, file)
+      const { error: uploadError } = await supabase.storage
+        .from('profile_picture')
+        .upload(fileName, file)
 
-  if (uploadError) {
-    setError(uploadError.message)
-    setSaving(false)
-    return
-  }
+      if (uploadError) {
+        console.error("UPLOAD ERROR", uploadError)
+        setError(JSON.stringify(uploadError, null, 2))
+        setSaving(false)
+        return
+      }
 
-  const { data: publicUrlData } = supabase.storage
-    .from('profile_picture')
-    .getPublicUrl(fileName)
+      const { data: publicUrlData } = supabase.storage
+        .from('profile_picture')
+        .getPublicUrl(fileName)
 
-  uploadedUrl = publicUrlData.publicUrl
-}
+      uploadedUrl = publicUrlData.publicUrl
+    }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({
         username: profile.username,
         profile_picture: uploadedUrl,
+
+        intake: profile.intake,
+        weight: profile.weight,
+        sleep: profile.sleep,
+        activity: profile.activity,
       })
       .eq('user_id', user.id)
-      .select()
 
     if (error) {
       setError(error.message)
-    } else if (!data || data.length === 0) {
-      setError('No changes were saved.')
     } else {
-  setMessage('Your profile was updated successfully.')
+      setMessage('Your profile was updated successfully.')
 
-  setProfile(prev => ({
-    ...prev,
-    profile_picture: uploadedUrl,
-  }))
+      setProfile(prev => ({
+        ...prev,
+        profile_picture: uploadedUrl,
+      }))
 
-  setInitialProfile({
-    ...profile,
-    profile_picture: uploadedUrl,
-  })
+      setInitialProfile({
+        ...profile,
+        profile_picture: uploadedUrl,
+      })
 
-  setFile(null)
-}
+      setFile(null)
+    }
 
     setSaving(false)
   }
@@ -169,91 +196,134 @@ const hasChanges =
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 rounded-3xl bg-white p-8 shadow-lg">
 
-          <div className="mb-6">
-            <h1 className="text-3xl font-semibold text-slate-900">
-                Goed bezig {profile.username || '...'}!
-            </h1>
-          </div>
+          <h1 className="text-3xl font-semibold text-slate-900 mb-6">
+            Goed bezig {profile.username || '...'}!
+          </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-    {/* KOLOM A */}
-    <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-      {/* EMAIL */}
-      <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-        Email address
-        <input
-          type="email"
-          value={profile.email}
-          disabled
-          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 opacity-70 cursor-not-allowed"
-        />
-      </label>
+              {/* LEFT */}
+              <div className="space-y-6">
 
-      {/* USERNAME */}
-      <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-        Username
-        <input
-          type="text"
-          value={profile.username ?? ''}
-          onChange={e => handleChange('username', e.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-      </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                  Email address
+                  <input
+                    type="email"
+                    value={profile.email}
+                    disabled
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 opacity-70 cursor-not-allowed"
+                  />
+                </label>
 
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                  Username
+                  <input
+                    type="text"
+                    value={profile.username ?? ''}
+                    onChange={e => handleChange('username', e.target.value)}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
 
-    </div>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                  Profile picture
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                  />
+                </label>
 
-        {/* KOLOM B */}
-    <div className="space-y-6">
+                {profile.profile_picture && (
+                  <img
+                    src={profile.profile_picture}
+                    alt="Profile"
+                    className="h-28 w-28 rounded-full object-cover border border-slate-200"
+                  />
+                )}
 
-      <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-        Profile picture
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        />
-      </label>
+              </div>
 
-      {profile.profile_picture && (
-        <div className="flex flex-col items-start gap-3">
-          <img
-            src={profile.profile_picture}
-            alt="Profile"
-            className="h-32 w-32 rounded-full object-cover border border-slate-200"
-          />
+              {/* RIGHT */}
+              <div className="space-y-6">
+
+                <h2 className="text-sm font-semibold text-slate-700">
+                  Active modules
+                </h2>
+
+                <label className="flex items-center gap-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={profile.intake ?? false}
+                    onChange={e =>
+                      setProfile(prev => ({ ...prev, intake: e.target.checked }))
+                    }
+                  />
+                  Intake (inname)
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={profile.weight ?? false}
+                    onChange={e =>
+                      setProfile(prev => ({ ...prev, weight: e.target.checked }))
+                    }
+                  />
+                  Weight (gewicht)
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={profile.sleep ?? false}
+                    onChange={e =>
+                      setProfile(prev => ({ ...prev, sleep: e.target.checked }))
+                    }
+                  />
+                  Sleep (slaap)
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={profile.activity ?? false}
+                    onChange={e =>
+                      setProfile(prev => ({ ...prev, activity: e.target.checked }))
+                    }
+                  />
+                  Activity (activiteit)
+                </label>
+
+              </div>
+
+            </div>
+
+            {message && (
+              <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">
+                {message}
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-2xl bg-orange-500 px-6 py-3 text-white font-semibold hover:bg-blue-700 disabled:bg-slate-400"
+            >
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+
+          </form>
         </div>
-      )}
-
-    </div>
-      </div> {/* end grid */}
-
-      {message && (
-    <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">
-      {message}
-    </div>
-  )}
-
-  {error && (
-    <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">
-      {error}
-    </div>
-  )}
-
-  <button
-    type="submit"
-    disabled={saving}
-    className="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-  >
-    {saving ? 'Saving…' : 'Save changes'}
-  </button>
-
-</form>
-               </div>
       </div>
     </div>
   )

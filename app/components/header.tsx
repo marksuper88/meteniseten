@@ -1,7 +1,7 @@
 'use client'
 
 const HEADER_IMAGE_URL =
-  'https://frxvdjqqsgdynkktbvim.supabase.co/storage/v1/object/public/layout/scale.png'
+  'https://frxvdjqqsgdynkktbvim.supabase.co/storage/v1/object/public/layout/1080x1080.png'
 
 export default function Header() {
   return (

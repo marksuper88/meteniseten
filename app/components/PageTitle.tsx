@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 
 const titles: Record<string, string> = {
-  '/': "Dashboard",
+  '/': "Home",
   '/my-weight' : "Mijn gewicht",
   '/profile': 'Mijn profiel',
 }

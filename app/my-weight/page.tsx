@@ -9,6 +9,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 
 type WeightRow = {
@@ -31,6 +32,47 @@ export default function MyWeightPage() {
       setReady(true);
     });
   }, []);
+
+  // =========================
+  // TARGET WEIGHT
+  // =========================
+  const [targetWeight, setTargetWeight] = useState("");
+  const [savingTarget, setSavingTarget] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    async function loadProfile() {
+      const { data } = await supabase
+        .from("profiles")
+        .select("target_weight")
+        .eq("user_id", userId)
+        .single();
+
+      setTargetWeight(data?.target_weight?.toString() ?? "");
+    }
+
+    loadProfile();
+  }, [userId]);
+
+  async function handleSaveTargetWeight() {
+    if (!userId) return;
+
+    setSavingTarget(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        target_weight: targetWeight === "" ? null : Number(targetWeight),
+      })
+      .eq("user_id", userId);
+
+    setSavingTarget(false);
+
+    if (error) {
+      console.error(error);
+    }
+  }
 
   // =========================
   // DATE DEFAULT RANGE
@@ -63,15 +105,12 @@ export default function MyWeightPage() {
   // =========================
   const [chartData, setChartData] = useState<WeightRow[]>([]);
 
-  // toggles
   const [showMorning, setShowMorning] = useState(true);
   const [showNight, setShowNight] = useState(true);
 
-  // Y axis
   const [yMin, setYMin] = useState(85);
   const [yMax, setYMax] = useState(105);
 
-  // date range
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);
 
@@ -129,41 +168,37 @@ export default function MyWeightPage() {
   }, [userId, startDate, endDate]);
 
   // =========================
-  // SAVE
+  // SAVE WEIGHT
   // =========================
-async function handleSave() {
-  if (!userId) return;
+  async function handleSave() {
+    if (!userId) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  const payload = {
-    user_id: userId,
-    date,
-    morning_weight_kg: morning === "" ? null : Number(morning),
-    night_weight_kg: night === "" ? null : Number(night),
-  };
+    const payload = {
+      user_id: userId,
+      date,
+      morning_weight_kg: morning === "" ? null : Number(morning),
+      night_weight_kg: night === "" ? null : Number(night),
+    };
 
-  const { error } = await supabase
-    .from("weight")
-    .upsert(payload, {
-      onConflict: "user_id,date",
-    });
+    const { error } = await supabase
+      .from("weight")
+      .upsert(payload, {
+        onConflict: "user_id,date",
+      });
 
-  setLoading(false);
+    setLoading(false);
 
-  if (error) {
-    console.error(error);
-    setSuccessMessage("Opslaan mislukt ❌");
-    return;
+    if (error) {
+      setSuccessMessage("Opslaan mislukt ❌");
+      return;
+    }
+
+    setSuccessMessage("Gewicht opgeslagen ✔️");
+
+    setTimeout(() => setSuccessMessage(null), 2500);
   }
-
-  setSuccessMessage("Gewicht opgeslagen ✔️");
-
-  // auto-hide na 2.5 sec
-  setTimeout(() => {
-    setSuccessMessage(null);
-  }, 2500);
-}
 
   // =========================
   // LOADING
@@ -173,121 +208,102 @@ async function handleSave() {
   return (
     <div className="w-full min-h-screen bg-blue-100 p-6 space-y-6">
 
-{successMessage && (
-  <div className="fixed top-4 right-4 bg-black text-white px-4 py-2 rounded-lg shadow-lg z-50">
-    {successMessage}
-  </div>
-)}
+      {successMessage && (
+        <div className="fixed top-4 right-4 bg-black text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          {successMessage}
+        </div>
+      )}
 
       {/* =========================
-          INPUT CONTAINER (SMALLER)
+          INPUT + TARGET WEIGHT
       ========================= */}
-      <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4">
+      <div className="flex flex-col md:flex-row gap-4">
 
-        <h2 className="font-bold text-lg">Weight input</h2>
+        {/* WEIGHT INPUT */}
+        <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4">
+          <h2 className="font-bold text-lg">Weight input</h2>
 
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full border p-2 rounded"
-        />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
 
-        <input
-          type="number"
-          placeholder="Morning weight"
-          value={morning}
-          onChange={(e) => setMorning(e.target.value)}
-          className="w-full border p-2 rounded"
-        />
+          <input
+            type="number"
+            placeholder="Morning weight"
+            value={morning}
+            onChange={(e) => setMorning(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
 
-        <input
-          type="number"
-          placeholder="Night weight"
-          value={night}
-          onChange={(e) => setNight(e.target.value)}
-          className="w-full border p-2 rounded"
-        />
+          <input
+            type="number"
+            placeholder="Night weight"
+            value={night}
+            onChange={(e) => setNight(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="bg-orange-500 text-white px-4 py-2 rounded w-fit"
-        >
-          {loading ? "Saving..." : "Save"}
-        </button>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="bg-orange-500 text-white px-4 py-2 rounded w-fit"
+          >
+            {loading ? "Saving..." : "Save"}
+          </button>
+        </div>
+
+        {/* TARGET WEIGHT */}
+        <div className="bg-white p-4 rounded-xl shadow w-full max-w-md space-y-4">
+          <h2 className="font-bold text-lg">Target weight</h2>
+
+          <input
+            type="number"
+            placeholder="Target weight"
+            value={targetWeight}
+            onChange={(e) => setTargetWeight(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
+
+          <button
+            onClick={handleSaveTargetWeight}
+            disabled={savingTarget}
+            className="bg-orange-500 text-white px-4 py-2 rounded w-fit"
+          >
+            {savingTarget ? "Saving..." : "Opslaan"}
+          </button>
+        </div>
+
       </div>
 
       {/* =========================
           CHART CONTROLS
       ========================= */}
       <div className="bg-white p-4 rounded-xl shadow space-y-5">
-
         <h2 className="font-bold text-lg">Chart controls</h2>
 
-        {/* 1. TOGGLES */}
-        <div className="space-y-2">
-          <div className="text-sm text-slate-600">Series</div>
+        <div className="flex gap-4">
+          <button onClick={() => setShowMorning(!showMorning)}>
+            <span className="w-3 h-3 rounded-full bg-blue-500 inline-block mr-2" />
+            Morning {showMorning ? "✓" : "✕"}
+          </button>
 
-          <div className="flex gap-4">
-            <button
-              onClick={() => setShowMorning(!showMorning)}
-              className="flex items-center gap-2"
-            >
-              <span className="w-3 h-3 rounded-full bg-orange-500" />
-              Morning {showMorning ? "✓" : "✕"}
-            </button>
-
-            <button
-              onClick={() => setShowNight(!showNight)}
-              className="flex items-center gap-2"
-            >
-              <span className="w-3 h-3 rounded-full bg-gray-900" />
-              Night {showNight ? "✓" : "✕"}
-            </button>
-          </div>
+          <button onClick={() => setShowNight(!showNight)}>
+            <span className="w-3 h-3 rounded-full bg-orange-500 inline-block mr-2" />
+            Night {showNight ? "✓" : "✕"}
+          </button>
         </div>
 
-        {/* 2. Y-AS */}
-        <div className="space-y-2">
-          <div className="text-sm text-slate-600">Y-as (kg range)</div>
-
-          <div className="flex gap-2">
-            <input
-              value={yMin}
-              onChange={(e) => setYMin(Number(e.target.value))}
-              className="border p-2 rounded w-1/2"
-              placeholder="min"
-            />
-            <input
-              value={yMax}
-              onChange={(e) => setYMax(Number(e.target.value))}
-              className="border p-2 rounded w-1/2"
-              placeholder="max"
-            />
-          </div>
+        <div className="flex gap-2">
+          <input value={yMin} onChange={(e) => setYMin(Number(e.target.value))} className="border p-2 rounded w-1/2" />
+          <input value={yMax} onChange={(e) => setYMax(Number(e.target.value))} className="border p-2 rounded w-1/2" />
         </div>
 
-        {/* 3. DATE RANGE */}
-        <div className="space-y-2">
-          <div className="text-sm text-slate-600">
-            Date range (default: last 31 days → next 14 days)
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border p-2 rounded w-1/2"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border p-2 rounded w-1/2"
-            />
-          </div>
+        <div className="flex gap-2">
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border p-2 rounded w-1/2" />
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border p-2 rounded w-1/2" />
         </div>
       </div>
 
@@ -302,27 +318,24 @@ async function handleSave() {
             <Tooltip />
 
             {showMorning && (
-              <Line
-                type="monotone"
-                dataKey="morning"
-                stroke="#f97316"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="morning" stroke="#3b82f6" strokeWidth={2} dot={false} />
             )}
 
             {showNight && (
-              <Line
-                type="monotone"
-                dataKey="night"
-                stroke="#111827"
-                strokeWidth={2}
-                dot={false}
+              <Line type="monotone" dataKey="night" stroke="#f97316" strokeWidth={2} dot={false} />
+            )}
+
+            {targetWeight && (
+              <ReferenceLine
+                y={Number(targetWeight)}
+                stroke="#000000"
+                strokeDasharray="6 6"
               />
             )}
           </LineChart>
         </ResponsiveContainer>
       </div>
+
     </div>
   );
 }
