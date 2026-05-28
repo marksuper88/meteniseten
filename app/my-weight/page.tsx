@@ -227,7 +227,7 @@ export default function MyWeightPage() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full border p-2 rounded"
+            className="w-full max-w-full box-border border p-2 rounded"
           />
 
           <input
