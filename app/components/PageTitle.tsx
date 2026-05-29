@@ -10,6 +10,7 @@ const titles: Record<string, string> = {
   '/my-weight' : 'Mijn gewicht',
   '/my-intake' : 'Mijn voeding',
   '/my-activity' : 'Mijn activiteit',
+  '/my-nutrition' : 'Mijn voedingswaarden dashboard'
 }
 
 export default function PageTitle() {

@@ -40,7 +40,7 @@ export default function HomePage() {
 
         {/* ❌ NOT LOGGED IN */}
         {!isLoggedIn && (
-          <div className="border-2 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
+          <div className="border-1 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
             <p className="mb-4 font-semibold">Bekijk de modules</p>
             <Link
               href="/modules"
@@ -54,33 +54,81 @@ export default function HomePage() {
         {/* ✅ LOGGED IN */}
         {isLoggedIn && (
           <>
-            <div className="border-2 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
-              <p className="mb-4 font-semibold">Mijn voeding</p>
-              <Link href="/my-intake" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-blue-400 transition">
-                Open
-              </Link>
+
+            {/* ===================== */}
+            {/* MIJN VOEDING */}
+            {/* ===================== */}
+
+            <div className="border-1 border-blue-500 rounded-xl p-6 bg-white">
+              <p className="mb-4 font-semibold text-center text-lg">
+                Mijn voeding
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* TILE 1 */}
+                <Link
+                  href="/my-intake"
+                  className="border-1 border-blue-500 rounded-2xl p-4 bg-orange-100 hover:shadow-lg transition flex flex-col items-center"
+                >
+                  <p className="mb-3 font-semibold">Mijn inname</p>
+
+                  {/* FIXED IMAGE */}
+                  <div className="w-full flex justify-center">
+                    <img
+                      src="https://frxvdjqqsgdynkktbvim.supabase.co/storage/v1/object/public/layout/bord2.png"
+                      alt="Mijn inname"
+                      className="w-1/2 h-auto object-contain"
+                    />
+                  </div>
+                </Link>
+
+                {/* TILE 2 */}
+                <Link
+                  href="/my-nutrition"
+                  className="border-1 border-blue-500 rounded-2xl p-4 bg-orange-100 hover:shadow-lg transition flex flex-col items-center"
+                >
+                  <p className="mb-3 font-semibold">
+                    Mijn voedingswaarden dashboard
+                  </p>
+
+                  {/* FIXED IMAGE */}
+                  <div className="w-full flex justify-center">
+                    <img
+                      src="https://frxvdjqqsgdynkktbvim.supabase.co/storage/v1/object/public/layout/board.png"
+                      alt="Mijn voedingswaarden dashboard"
+                      className="w-1/2 h-auto object-contain"
+                    />
+                  </div>
+                </Link>
+
+              </div>
             </div>
 
-            <div className="border-2 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
+            {/* ACTIVITY */}
+            <div className="border-1 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
               <p className="mb-4 font-semibold">Mijn activiteit</p>
-              <Link href="/my-activity" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-blue-400 transition">
-                Open
+              <Link href="/my-activity" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition">
+                Activiteit registreren
               </Link>
             </div>
 
-            <div className="border-2 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
+            {/* WEIGHT */}
+            <div className="border-1 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
               <p className="mb-4 font-semibold">Mijn gewicht</p>
-              <Link href="/my-weight" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-blue-400 transition">
+              <Link href="/my-weight" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition">
                 Open
               </Link>
             </div>
 
-            <div className="border-2 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
+            {/* OVERVIEW */}
+            <div className="border-1 border-blue-500 rounded-xl p-6 bg-white flex flex-col items-center justify-center">
               <p className="mb-4 font-semibold">Mijn overzicht</p>
-              <Link href="/my-overview" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-blue-400 transition">
+              <Link href="/my-overview" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition">
                 Open
               </Link>
             </div>
+
           </>
         )}
 

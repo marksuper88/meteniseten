@@ -14,6 +14,12 @@ import {
   Tooltip,
 } from 'recharts'
 
+import {
+  Pencil,
+  Save,
+  Trash2,
+} from 'lucide-react'
+
 export default function MyIntakePage() {
 
   const today = new Date().toLocaleDateString(
@@ -25,31 +31,89 @@ export default function MyIntakePage() {
 
   const [user, setUser] = useState<any>(null)
 
-  const [ingredients, setIngredients] = useState<any[]>([])
+  const [ingredients, setIngredients] =
+    useState<any[]>([])
 
-  const [intakeRows, setIntakeRows] = useState<any[]>([])
-  const [todayRows, setTodayRows] = useState<any[]>([])
+  const [intakeRows, setIntakeRows] =
+    useState<any[]>([])
+
+  const [todayRows, setTodayRows] =
+    useState<any[]>([])
+
+  const [
+    dailyNutritionRows,
+    setDailyNutritionRows,
+  ] = useState<any[]>([])
 
   const [date, setDate] = useState(today)
-  const [ingredientId, setIngredientId] = useState('')
-  const [quantity, setQuantity] = useState('')
 
-  const [series1, setSeries1] = useState('')
-  const [series2, setSeries2] = useState('')
+  const [ingredientId, setIngredientId] =
+    useState('')
 
-  const [yMin, setYMin] = useState('0')
-  const [yMax, setYMax] = useState('500')
+  const [quantity, setQuantity] =
+    useState('')
 
-  const selectableFields = [
-    'quantity',
-    'kcal',
-    'fats',
-    'proteins',
-    'carbs',
-    'fibers',
-    'salt',
-    'sugars',
+  const [kcalOverig, setKcalOverig] =
+    useState('')
+
+  const [selectedSeries, setSelectedSeries] =
+    useState<string[]>(['', ''])
+
+  const [
+    editingRowId,
+    setEditingRowId,
+  ] = useState<string | null>(null)
+
+  const [
+    editingQuantity,
+    setEditingQuantity,
+  ] = useState('')
+
+  const lineColors = [
+    '#f97316',
+    '#3b82f6',
+    '#22c55e',
+    '#e11d48',
+    '#8b5cf6',
+    '#14b8a6',
+    '#f59e0b',
+    '#6366f1',
   ]
+
+  const selectableFields = useMemo(() => {
+
+    if (
+      !dailyNutritionRows ||
+      dailyNutritionRows.length === 0
+    ) {
+      return []
+    }
+
+    return Object.keys(
+      dailyNutritionRows[0]
+    ).filter(
+      (key) =>
+        ![
+          'id',
+          'ingredient',
+          'category',
+          'user_id',
+          'date',
+          'created_at',
+        ].includes(key)
+    )
+
+  }, [dailyNutritionRows])
+
+  const selectedIngredient =
+    ingredients.find(
+      (ingredient) =>
+        ingredient.id === ingredientId
+    )
+
+  const isOverig =
+    selectedIngredient &&
+    selectedIngredient.kcal === null
 
   useEffect(() => {
     loadPage()
@@ -69,15 +133,10 @@ export default function MyIntakePage() {
 
     const {
       data: ingredientData,
-      error: ingredientError,
     } = await supabase
       .from('ingredients')
       .select('*')
       .order('ingredient')
-
-    console.log('INGREDIENTS')
-    console.log(ingredientData)
-    console.log(ingredientError)
 
     const loadedIngredients =
       ingredientData || []
@@ -104,21 +163,14 @@ export default function MyIntakePage() {
 
     const {
       data: intakeData,
-      error: intakeError,
     } = await supabase
       .from('intake')
       .select('*')
       .eq('user_id', user.id)
       .gte('date', startDateString)
-      .order('date', {
-        ascending: true,
+      .order('created_at', {
+        ascending: false,
       })
-
-    console.log('INTAKE')
-    console.log(intakeData)
-    console.log(intakeError)
-
-    // MANUAL JOIN
 
     const enrichedIntake =
       (intakeData || []).map((row) => {
@@ -147,6 +199,23 @@ export default function MyIntakePage() {
       )
 
     setTodayRows(todayOnly)
+
+    // LOAD DAILY NUTRITION VIEW
+
+    const {
+      data: nutritionData,
+    } = await supabase
+      .from('daily_nutrition')
+      .select('*')
+      .eq('user_id', user.id)
+      .gte('date', startDateString)
+      .order('date', {
+        ascending: true,
+      })
+
+    setDailyNutritionRows(
+      nutritionData || []
+    )
   }
 
   async function handleSubmit(e: any) {
@@ -162,15 +231,19 @@ export default function MyIntakePage() {
           {
             date,
             ingredient: ingredientId,
-            quantity: Number(quantity),
+            quantity:
+              Number(quantity),
+            kcal_overig:
+              isOverig
+                ? Number(
+                    kcalOverig
+                  )
+                : null,
             user_id: user.id,
             created_at:
               new Date().toISOString(),
           },
         ])
-
-    console.log('INSERT')
-    console.log(error)
 
     if (error) {
       alert('Opslaan mislukt')
@@ -181,47 +254,229 @@ export default function MyIntakePage() {
 
     setIngredientId('')
     setQuantity('')
+    setKcalOverig('')
 
     loadPage()
   }
 
+  async function handleDelete(
+    id: string
+  ) {
+
+    const confirmed =
+      confirm(
+        'Weet je zeker dat je deze intake wilt verwijderen?'
+      )
+
+    if (!confirmed) return
+
+    const { error } =
+      await supabase
+        .from('intake')
+        .delete()
+        .eq('id', id)
+
+    if (error) {
+      alert('Verwijderen mislukt')
+      return
+    }
+
+    loadPage()
+  }
+
+  async function handleEditSave(
+    id: string
+  ) {
+
+    const { error } =
+      await supabase
+        .from('intake')
+        .update({
+          quantity:
+            Number(
+              editingQuantity
+            ),
+        })
+        .eq('id', id)
+
+    if (error) {
+      alert('Opslaan mislukt')
+      return
+    }
+
+    setEditingRowId(null)
+    setEditingQuantity('')
+
+    loadPage()
+  }
+
+  function addSeries() {
+
+    setSelectedSeries([
+      ...selectedSeries,
+      '',
+    ])
+  }
+
+  function removeSeries(
+    index: number
+  ) {
+
+    if (
+      selectedSeries.length <= 2
+    ) {
+      return
+    }
+
+    const updated =
+      selectedSeries.filter(
+        (_, i) => i !== index
+      )
+
+    setSelectedSeries(updated)
+  }
+
+  function updateSeries(
+    index: number,
+    value: string
+  ) {
+
+    const updated =
+      [...selectedSeries]
+
+    updated[index] = value
+
+    setSelectedSeries(updated)
+  }
+
   const chartData = useMemo(() => {
 
-    return intakeRows.map((row) => {
+    return dailyNutritionRows.map(
+      (row) => {
 
-      const ingredient =
-        row.ingredient_data
-
-      const factor =
-        Number(row.quantity) / 100
-
-      function getValue(field: string) {
-
-        if (!field) return null
-
-        if (field === 'quantity') {
-          return Number(row.quantity)
+        const dataPoint: any = {
+          date: row.date,
         }
 
-        return (
-          Number(
-            ingredient?.[field] || 0
-          ) * factor
-        )
-      }
+        selectedSeries.forEach(
+          (series) => {
 
-      return {
-        date: row.date,
-        series1: getValue(series1),
-        series2: getValue(series2),
+            if (!series) return
+
+            dataPoint[series] =
+              Number(
+                row[series] || 0
+              )
+          }
+        )
+
+        return dataPoint
       }
-    })
+    )
 
   }, [
-    intakeRows,
-    series1,
-    series2,
+    dailyNutritionRows,
+    selectedSeries,
   ])
+
+  const groupedTodayRows = useMemo(() => {
+
+    const grouped: any[] = []
+
+    todayRows.forEach((row) => {
+
+      const isOverigRow =
+        row.kcal_overig !== null
+
+      // OVERIG NIET GROEPEREN
+
+      if (isOverigRow) {
+
+        grouped.push({
+          ...row,
+          displayQuantity:
+            Number(row.quantity),
+          displayKcalPerUnit:
+            Number(row.kcal_overig),
+          displayKcalTotal:
+            Number(row.quantity) *
+            Number(row.kcal_overig),
+        })
+
+        return
+      }
+
+      const ingredientId =
+        row.ingredient
+
+      const existing =
+        grouped.find(
+          (item) =>
+            item.ingredient ===
+            ingredientId
+        )
+
+      const kcalPerUnit =
+        Number(
+          row.ingredient_data
+            ?.kcal || 0
+        )
+
+      if (existing) {
+
+        existing.displayQuantity +=
+          Number(row.quantity)
+
+        existing.displayKcalTotal +=
+          Number(row.quantity) *
+          kcalPerUnit
+
+      } else {
+
+        grouped.push({
+          ...row,
+          displayQuantity:
+            Number(row.quantity),
+          displayKcalPerUnit:
+            kcalPerUnit,
+          displayKcalTotal:
+            Number(row.quantity) *
+            kcalPerUnit,
+        })
+
+      }
+
+    })
+
+    return grouped
+
+  }, [todayRows])
+
+  const totalTodayKcal =
+    todayRows.reduce(
+      (sum, row) => {
+
+        const kcal =
+          row.kcal_overig !==
+          null
+            ? Number(
+                row.kcal_overig
+              )
+            : Number(
+                row
+                  .ingredient_data
+                  ?.kcal || 0
+              )
+
+        return (
+          sum +
+          Number(row.quantity) *
+            kcal
+        )
+
+      },
+      0
+    )
 
   return (
     <div className="min-h-screen bg-blue-100 p-6">
@@ -319,6 +574,30 @@ export default function MyIntakePage() {
 
             </div>
 
+            {isOverig && (
+
+              <div>
+
+                <label className="block mb-2 font-semibold">
+                  Kcal
+                </label>
+
+                <input
+                  type="number"
+                  value={kcalOverig}
+                  onChange={(e) =>
+                    setKcalOverig(
+                      e.target.value
+                    )
+                  }
+                  className="w-full border rounded-xl p-3"
+                  required
+                />
+
+              </div>
+
+            )}
+
             <div className="md:col-span-3">
 
               <button
@@ -339,7 +618,15 @@ export default function MyIntakePage() {
         <div className="bg-white border-2 border-blue-500 rounded-2xl p-6 overflow-x-auto">
 
           <h2 className="text-2xl font-bold mb-6">
-            Intake vandaag
+
+            Intake vandaag:
+            {' '}
+            {Math.round(
+              totalTodayKcal
+            )}
+            {' '}
+            kcal
+
           </h2>
 
           <table className="w-full border-collapse">
@@ -349,15 +636,23 @@ export default function MyIntakePage() {
               <tr className="border-b">
 
                 <th className="text-left p-3">
-                  Tijd
-                </th>
-
-                <th className="text-left p-3">
                   Ingredient
                 </th>
 
                 <th className="text-left p-3">
                   Quantity
+                </th>
+
+                <th className="text-left p-3">
+                  Kcal / unit
+                </th>
+
+                <th className="text-left p-3">
+                  Kcal totaal
+                </th>
+
+                <th className="text-left p-3">
+                  Actions
                 </th>
 
               </tr>
@@ -366,47 +661,123 @@ export default function MyIntakePage() {
 
             <tbody>
 
-              {todayRows.map((row) => (
+              {groupedTodayRows.map(
+                (row) => {
 
-                <tr
-                  key={row.id}
-                  className="border-b"
-                >
+                  const kcalPerUnit =
+                    row.displayKcalPerUnit
 
-                  <td className="p-3">
+                  const kcalTotal =
+                    row.displayKcalTotal
 
-                    {new Date(
-                      row.created_at
-                    ).toLocaleTimeString(
-                      'nl-NL',
-                      {
-                        hour: '2-digit',
-                        minute:
-                          '2-digit',
-                        timeZone:
-                          'Europe/Amsterdam',
-                      }
-                    )}
+                  return (
 
-                  </td>
+                    <tr
+                      key={row.id}
+                      className="border-b"
+                    >
 
-                  <td className="p-3">
+                      <td className="p-3">
 
-                    {
-                      row
-                        .ingredient_data
-                        ?.ingredient
-                    }
+                        {
+                          row
+                            .ingredient_data
+                            ?.ingredient
+                        }
 
-                  </td>
+                      </td>
 
-                  <td className="p-3">
-                    {row.quantity}
-                  </td>
+                      <td className="p-3">
 
-                </tr>
+                        {editingRowId ===
+                        row.id ? (
 
-              ))}
+                          <input
+                            type="number"
+                            value={
+                              editingQuantity
+                            }
+                            onChange={(e) =>
+                              setEditingQuantity(
+                                e.target.value
+                              )
+                            }
+                            className="border rounded-lg p-2 w-24"
+                          />
+
+                        ) : (
+                          row.displayQuantity
+                        )}
+
+                      </td>
+
+                      <td className="p-3">
+                        {kcalPerUnit}
+                      </td>
+
+                      <td className="p-3">
+                        {kcalTotal}
+                      </td>
+
+                      <td className="p-3">
+
+                        <div className="flex gap-2">
+
+                          {editingRowId ===
+                          row.id ? (
+
+                            <button
+                              onClick={() =>
+                                handleEditSave(
+                                  row.id
+                                )
+                              }
+                              className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition"
+                            >
+                              <Save size={18} />
+                            </button>
+
+                          ) : (
+
+                            <button
+                              onClick={() => {
+
+                                setEditingRowId(
+                                  row.id
+                                )
+
+                                setEditingQuantity(
+                                  row.displayQuantity.toString()
+                                )
+
+                              }}
+                              className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition"
+                            >
+                              <Pencil size={18} />
+                            </button>
+
+                          )}
+
+                          <button
+                            onClick={() =>
+                              handleDelete(
+                                row.id
+                              )
+                            }
+                            className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  )
+                }
+              )}
 
             </tbody>
 
@@ -418,119 +789,94 @@ export default function MyIntakePage() {
 
         <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
 
-          <h2 className="text-2xl font-bold mb-6">
-            Chart controls
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+
+            <h2 className="text-2xl font-bold">
+              Chart controls
+            </h2>
+
+            <button
+              type="button"
+              onClick={addSeries}
+              className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-blue-400 transition"
+            >
+              + Series
+            </button>
+
+          </div>
 
           <div className="grid md:grid-cols-4 gap-4">
 
-            <div>
+            {selectedSeries.map(
+              (
+                selected,
+                index
+              ) => (
 
-              <label className="block mb-2 font-semibold">
-                Series 1
-              </label>
+                <div
+                  key={index}
+                  className="border rounded-xl p-3"
+                >
 
-              <select
-                value={series1}
-                onChange={(e) =>
-                  setSeries1(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-xl p-3"
-              >
+                  <div className="flex items-center justify-between mb-2">
 
-                <option value="">
-                  Geen
-                </option>
+                    <label className="font-semibold">
 
-                {selectableFields.map(
-                  (field) => (
-                    <option
-                      key={field}
-                      value={field}
-                    >
-                      {field}
+                      Series {index + 1}
+
+                    </label>
+
+                    {selectedSeries.length >
+                      2 && (
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeSeries(
+                            index
+                          )
+                        }
+                        className="text-red-500 font-bold"
+                      >
+                        ×
+                      </button>
+
+                    )}
+
+                  </div>
+
+                  <select
+                    value={selected}
+                    onChange={(e) =>
+                      updateSeries(
+                        index,
+                        e.target.value
+                      )
+                    }
+                    className="w-full border rounded-xl p-3"
+                  >
+
+                    <option value="">
+                      Geen
                     </option>
-                  )
-                )}
 
-              </select>
+                    {selectableFields.map(
+                      (field) => (
+                        <option
+                          key={field}
+                          value={field}
+                        >
+                          {field}
+                        </option>
+                      )
+                    )}
 
-            </div>
+                  </select>
 
-            <div>
+                </div>
 
-              <label className="block mb-2 font-semibold">
-                Series 2
-              </label>
-
-              <select
-                value={series2}
-                onChange={(e) =>
-                  setSeries2(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-xl p-3"
-              >
-
-                <option value="">
-                  Geen
-                </option>
-
-                {selectableFields.map(
-                  (field) => (
-                    <option
-                      key={field}
-                      value={field}
-                    >
-                      {field}
-                    </option>
-                  )
-                )}
-
-              </select>
-
-            </div>
-
-            <div>
-
-              <label className="block mb-2 font-semibold">
-                Y-axis min
-              </label>
-
-              <input
-                type="number"
-                value={yMin}
-                onChange={(e) =>
-                  setYMin(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-xl p-3"
-              />
-
-            </div>
-
-            <div>
-
-              <label className="block mb-2 font-semibold">
-                Y-axis max
-              </label>
-
-              <input
-                type="number"
-                value={yMax}
-                onChange={(e) =>
-                  setYMax(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-xl p-3"
-              />
-
-            </div>
+              )
+            )}
 
           </div>
 
@@ -563,31 +909,38 @@ export default function MyIntakePage() {
                   dataKey="date"
                 />
 
-                <YAxis
-                  domain={[
-                    Number(yMin),
-                    Number(yMax),
-                  ]}
-                />
+                <YAxis />
 
                 <Tooltip />
 
-                {series1 && (
-                  <Line
-                    type="monotone"
-                    dataKey="series1"
-                    stroke="#f97316"
-                    strokeWidth={3}
-                  />
-                )}
+                {selectedSeries.map(
+                  (
+                    series,
+                    index
+                  ) => {
 
-                {series2 && (
-                  <Line
-                    type="monotone"
-                    dataKey="series2"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                  />
+                    if (!series)
+                      return null
+
+                    return (
+                      <Line
+                        key={
+                          series +
+                          index
+                        }
+                        type="monotone"
+                        dataKey={series}
+                        name={series}
+                        stroke={
+                          lineColors[
+                            index %
+                              lineColors.length
+                          ]
+                        }
+                        strokeWidth={3}
+                      />
+                    )
+                  }
                 )}
 
               </LineChart>
