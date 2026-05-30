@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { Pencil, Save, Trash2 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function MyIntakePage() {
   const today = new Date().toLocaleDateString('en-CA', {
@@ -415,12 +416,12 @@ async function handleSaveMeal() {
           <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
             <h2 className="text-2xl font-bold mb-6">Nieuwe intake</h2>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 min-w-0 w-full">
               <input
   type="date"
   value={date}
   onChange={(e) => setDate(e.target.value)}
-  className="block w-full min-w-0 max-w-full border rounded-xl p-3"
+  className="w-full block min-w-0 max-w-full border rounded-xl p-3 box-border appearance-none"
   required
 />
 
@@ -493,101 +494,141 @@ async function handleSaveMeal() {
             </form>
           </div>
 
-          {/* TOEVOEGEN */}
-          <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
-            <h2 className="text-2xl font-bold mb-6">Toevoegen</h2>
+{/* Mijn ingredienten */}
+<div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
+  <h2 className="text-2xl font-bold mb-6">Mijn ingredienten</h2>
 
-            <div className="flex flex-col gap-4">
-              <button onClick={() => setShowIngredientModal(true)}
-                className="px-4 py-3 bg-orange-500 text-white rounded-xl">
-                Voeg nieuw ingredient toe
-              </button>
+  <div className="flex flex-col gap-4">
+    
+    <Link
+      href="/my-ingredients"
+      className="px-4 py-3 bg-orange-500 text-white rounded-xl text-center"
+    >
+      Bekijk mijn ingredienten
+    </Link>
 
-              <button onClick={() => setShowMealModal(true)}
-                className="px-4 py-3 bg-orange-500 text-white rounded-xl">
-                Stel je maaltijd samen
-              </button>
-            </div>
-          </div>
-        </div>
+    <button
+      onClick={() => setShowIngredientModal(true)}
+      className="px-4 py-3 bg-orange-500 text-white rounded-xl"
+    >
+      Voeg nieuw ingredient toe
+    </button>
+
+    <button
+      onClick={() => setShowMealModal(true)}
+      className="px-4 py-3 bg-orange-500 text-white rounded-xl"
+    >
+      Stel je maaltijd samen
+    </button>
+  </div>
+</div>
+</div>
 
         {/* TABLE */}
         <div className="bg-white border-2 border-blue-500 rounded-2xl p-6 overflow-x-auto">
-          <h2 className="text-2xl font-bold mb-6">
-            Intake {date}: {Math.round(totalKcal)} kcal
-          </h2>
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+  <span>{date}:</span>
+  <span>{Math.round(totalKcal)} Kcal</span>
+</h2>
 
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Ingredient</th>
-                <th className="text-left p-3">Quantity</th>
-                <th className="text-left p-3">Kcal / unit</th>
-                <th className="text-left p-3">Kcal totaal</th>
-                <th className="text-left p-3">Actions</th>
-              </tr>
-            </thead>
+  <tr className="border-b">
+    <th className="text-left p-3">Ingredient</th>
+
+    <th className="text-left p-3">
+  <span className="portrait:hidden">Quantity</span>
+  <span className="hidden portrait:inline">#</span>
+</th>
+    <th className="text-left p-3 portrait:hidden">Kcal / unit</th>
+
+    <th className="text-left p-3">Kcal totaal</th>
+
+    <th className="text-left p-3 portrait:hidden">Actions</th>
+  </tr>
+</thead>
 
             <tbody>
-              {groupedTodayRows.map((row) => (
-                <tr key={row.id} className="border-b">
-                  <td className="p-3">{row.ingredient_data?.ingredient}</td>
+  {groupedTodayRows.map((row) => (
+    <tr key={row.id} className="border-b">
 
-                  <td className="p-3">
-                    {editingRowId === row.id ? (
-                      <input
-                        value={editingQuantity}
-                        onChange={(e) => setEditingQuantity(e.target.value)}
-                        className="border p-2 rounded-lg w-20"
-                      />
-                    ) : (
-                      row.displayQuantity
-                    )}
-                  </td>
+      {/* INGREDIENT */}
+      <td className="p-3">
+        {row.ingredient_data?.ingredient}
+      </td>
 
-                  <td className="p-3">{row.displayKcalPerUnit}</td>
-                  <td className="p-3">{row.displayKcalTotal}</td>
+      {/* QUANTITY */}
+      <td className="p-3">
+  {editingRowId === row.id ? (
+    <input
+      value={editingQuantity}
+      onChange={(e) => setEditingQuantity(e.target.value)}
+      className="border p-2 rounded-lg w-20"
+    />
+  ) : (
+    row.displayQuantity
+  )}
+</td>
 
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      {editingRowId === row.id ? (
-                        <button
-                          onClick={() => handleEditSave(row.id)}
-                          className="p-2 bg-orange-500 text-white rounded-lg"
-                        >
-                          <Save size={18} />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setEditingRowId(row.id)
-                            setEditingQuantity(row.displayQuantity)
-                          }}
-                          className="p-2 bg-orange-500 text-white rounded-lg"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                      )}
+      {/* kcal / unit */}
+      <td className="p-3 portrait:hidden">
+        {row.displayKcalPerUnit}
+      </td>
 
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="p-2 bg-orange-500 text-white rounded-lg"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+      {/* kcal totaal */}
+      <td className="p-3">
+        {row.displayKcalTotal}
+      </td>
+
+      {/* ACTIONS (hidden on portrait) */}
+      <td className="p-3 portrait:hidden">
+        <div className="flex gap-2">
+          {editingRowId === row.id ? (
+            <button
+              onClick={() => handleEditSave(row.id)}
+              className="p-2 bg-orange-500 text-white rounded-lg"
+            >
+              <Save size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setEditingRowId(row.id)
+                setEditingQuantity(row.displayQuantity)
+              }}
+              className="p-2 bg-orange-500 text-white rounded-lg"
+            >
+              <Pencil size={18} />
+            </button>
+          )}
+
+          <button
+            onClick={() => handleDelete(row.id)}
+            className="p-2 bg-orange-500 text-white rounded-lg"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
+          <div className="mt-4 flex justify-center">
+  <a
+    href="/my-nutrition"
+    className="bg-orange-500 text-white px-6 py-3 rounded-xl w-full md:w-auto text-center"
+  >
+    Bekijk je voedingswaarden dashboard
+  </a>
+</div>
         </div>
       </div>
 
 {/* ---------------- MODAL 1 ---------------- */}
 {showIngredientModal && (
   <div className="fixed inset-0 z-[99999] bg-black/50 flex items-center justify-center">
-    <div className="bg-white p-6 rounded-2xl w-[600px] max-h-[80vh] overflow-y-auto relative">
+    <div className="bg-white p-6 rounded-2xl w-[600px] max-w-[95vw] min-w-0 max-h-[80vh] overflow-y-auto relative">
 
       {/* CLOSE */}
       <button

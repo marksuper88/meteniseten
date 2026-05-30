@@ -261,7 +261,7 @@ export default function NutritionDashboard() {
         <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm">
           <h2 className="text-lg font-bold mb-4">Selecteer</h2>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 min-w-0">
 
             <div>
               <label className="font-semibold">Datum</label>
@@ -278,7 +278,7 @@ export default function NutritionDashboard() {
               <select
                 value={group}
                 onChange={(e) => setGroup(e.target.value)}
-                className="w-full border p-3 rounded-xl"
+                className="w-full block min-w-0 max-w-full border p-3 rounded-xl box-border appearance-none"
               >
                 <option value="Algemeen">Algemeen</option>
                 <option value="Vitaminen">Vitaminen</option>
@@ -290,58 +290,81 @@ export default function NutritionDashboard() {
         </div>
 
         {/* TABLE */}
-        <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm overflow-x-auto">
-          <h2 className="text-lg font-bold mb-4">Overzicht {group}</h2>
+<div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm overflow-x-auto">
+  <h2 className="text-lg font-bold mb-4">Overzicht {group}</h2>
 
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Voeding</th>
-                <th className="text-left p-3">Daily</th>
-                <th className="text-left p-3">7d totaal</th>
-                <th className="text-left p-3">7d avg</th>
-                <th className="text-left p-3">ADH</th>
-                <th className="text-left p-3">% ADH</th>
-              </tr>
-            </thead>
+  <table className="w-full border-collapse">
+    <thead>
+      <tr className="border-b">
+        <th className="text-left p-3">Voeding</th>
 
-            <tbody>
-              {tableRows.map((row, i) => (
-                <tr key={i} className="border-b">
-                  <td className="p-3 font-medium">{row.label}</td>
-                  <td className="p-3">{row.value}</td>
-                  <td className="p-3">{row.total_7d}</td>
-                  <td className="p-3">{row.avg_7d}</td>
-                  <td className="p-3">{row.adh_target}</td>
+        <th className="text-left p-3 portrait:hidden">
+          Daily
+        </th>
 
-                  <td className="p-3 w-[260px]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className={
-                            row.percent < 80
-                              ? 'bg-orange-400'
-                              : row.percent <= 120
-                                ? 'bg-green-500'
-                                : 'bg-red-500'
-                          }
-                          style={{
-                            width: `${clamp(row.percent, 0, 200)}%`,
-                            height: '100%',
-                          }}
-                        />
-                      </div>
+        <th className="text-left p-3 portrait:hidden">
+          7d totaal
+        </th>
 
-                      <span className="text-sm min-w-[60px] text-right">
-                        {formatValue(row.percent)}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <th className="text-left p-3 portrait:hidden">
+          7d avg
+        </th>
+
+        <th className="text-left p-3">ADH</th>
+
+        <th className="text-left p-3">% ADH</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {tableRows.map((row, i) => (
+        <tr key={i} className="border-b">
+          <td className="p-3 font-medium">{row.label}</td>
+
+          <td className="p-3 portrait:hidden">
+            {row.value}
+          </td>
+
+          <td className="p-3 portrait:hidden">
+            {row.total_7d}
+          </td>
+
+          <td className="p-3 portrait:hidden">
+            {row.avg_7d}
+          </td>
+
+          <td className="p-3">
+            {row.adh_target}
+          </td>
+
+          <td className="p-3 w-[260px]">
+            <div className="flex items-center gap-3">
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={
+                    row.percent < 80
+                      ? 'bg-orange-400'
+                      : row.percent <= 120
+                        ? 'bg-green-500'
+                        : 'bg-red-500'
+                  }
+                  style={{
+                    width: `${clamp(row.percent, 0, 200)}%`,
+                    height: '100%',
+                  }}
+                />
+              </div>
+
+              <span className="text-sm min-w-[60px] text-right">
+                {formatValue(row.percent)}%
+              </span>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
         {/* CHART CONTROLS */}
         <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm">
@@ -351,7 +374,7 @@ export default function NutritionDashboard() {
           <div className="mb-6">
             <label className="font-semibold block mb-2">Metric</label>
 
-            <div className="md:w-1/3">
+            <div className="md:w-1/3 min-w-0 w-full">
               <select
                 value={metric}
                 onChange={(e) => setMetric(e.target.value as MetricMode)}
@@ -376,7 +399,7 @@ export default function NutritionDashboard() {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-3">
+          <div className="grid md:grid-cols-3 gap-3 min-w-0">
             {selectedSeries.map((s) => (
               <div key={s.id} className="flex gap-2">
                 <select
