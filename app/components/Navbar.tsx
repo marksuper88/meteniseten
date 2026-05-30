@@ -137,7 +137,7 @@ useEffect(() => {
   className="hidden md:inline-flex items-center gap-1 px-2 py-2 rounded-md bg-orange-500 text-white font-semibold hover:bg-orange-400 transition"
 >
   <span className="text-lg leading-none">←</span>
-  Dashboard
+  Home
 </Link>
 )}
 

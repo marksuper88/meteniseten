@@ -1,958 +1,775 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-
 import { supabase } from '@/lib/supabaseClient'
-
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts'
-
-import {
-  Pencil,
-  Save,
-  Trash2,
-} from 'lucide-react'
+import { Pencil, Save, Trash2 } from 'lucide-react'
 
 export default function MyIntakePage() {
-
-  const today = new Date().toLocaleDateString(
-    'en-CA',
-    {
-      timeZone: 'Europe/Amsterdam',
-    }
-  )
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Europe/Amsterdam',
+  })
 
   const [user, setUser] = useState<any>(null)
-
-  const [ingredients, setIngredients] =
-    useState<any[]>([])
-
-  const [intakeRows, setIntakeRows] =
-    useState<any[]>([])
-
-  const [todayRows, setTodayRows] =
-    useState<any[]>([])
-
-  const [
-    dailyNutritionRows,
-    setDailyNutritionRows,
-  ] = useState<any[]>([])
+  const [ingredients, setIngredients] = useState<any[]>([])
+  const [nutritionFields, setNutritionFields] = useState<any[]>([])
+  const [intakeRows, setIntakeRows] = useState<any[]>([])
 
   const [date, setDate] = useState(today)
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [ingredientId, setIngredientId] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [kcalOverig, setKcalOverig] = useState('')
 
-  const [ingredientId, setIngredientId] =
-    useState('')
+  const [editingRowId, setEditingRowId] = useState<string | null>(null)
+  const [editingQuantity, setEditingQuantity] = useState('')
 
-  const [quantity, setQuantity] =
-    useState('')
+  // MODALS
+  const [showIngredientModal, setShowIngredientModal] = useState(false)
+  const [showMealModal, setShowMealModal] = useState(false)
 
-  const [kcalOverig, setKcalOverig] =
-    useState('')
+  // NEW INGREDIENT FORM STATE
+  const [newIngredient, setNewIngredient] = useState<any>({})
 
-  const [selectedSeries, setSelectedSeries] =
-    useState<string[]>(['', ''])
+  // MEAL BUILDER STATE
+  const [mealName, setMealName] = useState('')
+  const [mealRows, setMealRows] = useState([
+    { category: '', ingredient: '', quantity: 1 },
+  ])
 
-  const [
-    editingRowId,
-    setEditingRowId,
-  ] = useState<string | null>(null)
+  const selectedIngredient = ingredients.find((i) => i.id === ingredientId)
+  const isOverig = selectedIngredient && selectedIngredient.kcal === null
 
-  const [
-    editingQuantity,
-    setEditingQuantity,
-  ] = useState('')
+  useEffect(() => {
+  if (selectedCategory === 'Overig') {
+    const overigIngredient = ingredients.find(i => i.kcal === null)
 
-  const lineColors = [
-    '#f97316',
-    '#3b82f6',
-    '#22c55e',
-    '#e11d48',
-    '#8b5cf6',
-    '#14b8a6',
-    '#f59e0b',
-    '#6366f1',
-  ]
-
-  const selectableFields = useMemo(() => {
-
-    if (
-      !dailyNutritionRows ||
-      dailyNutritionRows.length === 0
-    ) {
-      return []
+    if (overigIngredient) {
+      setIngredientId(overigIngredient.id)
     }
 
-    return Object.keys(
-      dailyNutritionRows[0]
-    ).filter(
-      (key) =>
-        ![
-          'id',
-          'ingredient',
-          'category',
-          'user_id',
-          'date',
-          'created_at',
-        ].includes(key)
-    )
+    setQuantity('1')
+  }
+}, [selectedCategory, ingredients])
 
-  }, [dailyNutritionRows])
-
-  const selectedIngredient =
-    ingredients.find(
-      (ingredient) =>
-        ingredient.id === ingredientId
-    )
-
-  const isOverig =
-    selectedIngredient &&
-    selectedIngredient.kcal === null
+  // ---------------- ESC CLOSE MODALS ----------------
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowIngredientModal(false)
+        setShowMealModal(false)
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
 
   useEffect(() => {
     loadPage()
   }, [])
 
   async function loadPage() {
-
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     setUser(user)
-
     if (!user) return
 
-    // LOAD INGREDIENTS
-
-    const {
-      data: ingredientData,
-    } = await supabase
+    const { data: ingredientData } = await supabase
       .from('ingredients')
       .select('*')
       .order('ingredient')
 
-    const loadedIngredients =
-      ingredientData || []
+    const loadedIngredients = ingredientData || []
+    const filtered = loadedIngredients.filter(
+      (i) => i.user_id === null || i.user_id === user.id
+    )
+    setIngredients(filtered)
 
-    setIngredients(loadedIngredients)
-
-    // LAST 30 DAYS
+    const { data: nf } = await supabase.from('nutrition_fields').select('*')
+    setNutritionFields(nf || [])
 
     const startDate = new Date()
+    startDate.setDate(startDate.getDate() - 30)
 
-    startDate.setDate(
-      startDate.getDate() - 30
-    )
+    const startDateString = startDate.toLocaleDateString('en-CA', {
+      timeZone: 'Europe/Amsterdam',
+    })
 
-    const startDateString =
-      startDate.toLocaleDateString(
-        'en-CA',
-        {
-          timeZone: 'Europe/Amsterdam',
-        }
-      )
-
-    // LOAD INTAKE
-
-    const {
-      data: intakeData,
-    } = await supabase
+    const { data: intakeData } = await supabase
       .from('intake')
       .select('*')
       .eq('user_id', user.id)
       .gte('date', startDateString)
-      .order('created_at', {
-        ascending: false,
-      })
+      .order('created_at', { ascending: false })
 
-    const enrichedIntake =
-      (intakeData || []).map((row) => {
-
-        const ingredientData =
-          loadedIngredients.find(
-            (ingredient) =>
-              ingredient.id ===
-              row.ingredient
-          )
-
-        return {
-          ...row,
-          ingredient_data:
-            ingredientData || null,
-        }
-      })
+    const enrichedIntake = (intakeData || []).map((row) => {
+      const ingredientData = filtered.find((i) => i.id === row.ingredient)
+      return { ...row, ingredient_data: ingredientData || null }
+    })
 
     setIntakeRows(enrichedIntake)
-
-    // TODAY TABLE
-
-    const todayOnly =
-      enrichedIntake.filter(
-        (row) => row.date === today
-      )
-
-    setTodayRows(todayOnly)
-
-    // LOAD DAILY NUTRITION VIEW
-
-    const {
-      data: nutritionData,
-    } = await supabase
-      .from('daily_nutrition')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('date', startDateString)
-      .order('date', {
-        ascending: true,
-      })
-
-    setDailyNutritionRows(
-      nutritionData || []
-    )
   }
 
   async function handleSubmit(e: any) {
-
     e.preventDefault()
-
     if (!user) return
 
-    const { error } =
-      await supabase
-        .from('intake')
-        .insert([
-          {
-            date,
-            ingredient: ingredientId,
-            quantity:
-              Number(quantity),
-            kcal_overig:
-              isOverig
-                ? Number(
-                    kcalOverig
-                  )
-                : null,
-            user_id: user.id,
-            created_at:
-              new Date().toISOString(),
-          },
-        ])
+    const { error } = await supabase.from('intake').insert([
+      {
+        date,
+        ingredient: ingredientId,
+        quantity: Number(quantity),
+        kcal_overig: isOverig ? Number(kcalOverig) : null,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+      },
+    ])
 
-    if (error) {
-      alert('Opslaan mislukt')
-      return
-    }
+    if (error) return alert('Opslaan mislukt')
 
-    alert('Intake opgeslagen')
-
+    setSelectedCategory('')
     setIngredientId('')
     setQuantity('')
     setKcalOverig('')
-
     loadPage()
   }
 
-  async function handleDelete(
-    id: string
-  ) {
-
-    const confirmed =
-      confirm(
-        'Weet je zeker dat je deze intake wilt verwijderen?'
-      )
-
+  // ---------------- DELETE ----------------
+  async function handleDelete(id: string) {
+    const confirmed = confirm('Weet je zeker dat je deze intake wilt verwijderen?')
     if (!confirmed) return
 
-    const { error } =
-      await supabase
-        .from('intake')
-        .delete()
-        .eq('id', id)
-
-    if (error) {
-      alert('Verwijderen mislukt')
-      return
-    }
-
+    await supabase.from('intake').delete().eq('id', id)
     loadPage()
   }
 
-  async function handleEditSave(
-    id: string
-  ) {
-
-    const { error } =
-      await supabase
-        .from('intake')
-        .update({
-          quantity:
-            Number(
-              editingQuantity
-            ),
-        })
-        .eq('id', id)
-
-    if (error) {
-      alert('Opslaan mislukt')
-      return
-    }
+  // ---------------- EDIT SAVE ----------------
+  async function handleEditSave(id: string) {
+    await supabase
+      .from('intake')
+      .update({ quantity: Number(editingQuantity) })
+      .eq('id', id)
 
     setEditingRowId(null)
     setEditingQuantity('')
-
     loadPage()
   }
 
-  function addSeries() {
+  // ---------------- INGREDIENT SAVE ----------------
+async function handleSaveIngredient() {
+  if (!user) return
 
-    setSelectedSeries([
-      ...selectedSeries,
-      '',
-    ])
+  const payload: any = {
+    user_id: user.id,
+    ingredient: newIngredient.ingredient, // FIXED FIELD
+    category_1: newIngredient.category_1, // ✅ ADDED (was missing validation-safe inclusion)
+    kcal: Number(newIngredient.kcal),     // FIXED FIELD
   }
 
-  function removeSeries(
-    index: number
-  ) {
+  nutritionFields.forEach((f) => {
+    if (f.field_name !== 'kcal') {
+      payload[f.field_name] = newIngredient[f.field_name] ?? null
+    }
+  })
 
-    if (
-      selectedSeries.length <= 2
-    ) {
+  // ---------------- VALIDATION ----------------
+  if (!payload.ingredient || payload.ingredient.trim() === '') {
+    alert('ingredient naam is verplicht')
+    return
+  }
+
+  if (!payload.category_1) {
+    alert('categorie is verplicht')
+    return
+  }
+
+  if (
+    payload.kcal === undefined ||
+    payload.kcal === null ||
+    payload.kcal === '' ||
+    Number.isNaN(payload.kcal)
+  ) {
+    alert('kcal is verplicht')
+    return
+  }
+
+  const { error } = await supabase.from('ingredients').insert([payload])
+
+if (error) {
+  console.error('INGREDIENT INSERT ERROR:', error)
+  alert(error.message)
+  return
+}
+
+  setShowIngredientModal(false)
+  setNewIngredient({})
+  loadPage()
+}
+
+const intakeCategories = useMemo(() => {
+  const dbCats = Array.from(
+    new Set(
+      ingredients
+        .map(i => i.category_1)
+        .filter(Boolean)
+    )
+  )
+
+  return [
+    ...dbCats,
+    'Overig',
+  ]
+}, [ingredients])
+
+const mealCategories = useMemo(() => {
+  return Array.from(
+    new Set(
+      ingredients
+        .map(i => i.category_1)
+        .filter((c) => c === 'Eten' || c === 'Drinken')
+    )
+  )
+}, [ingredients])
+
+const filteredIngredients = useMemo(() => {
+  if (!selectedCategory) return []
+  if (selectedCategory === 'Overig') {
+    return ingredients.filter((i) => i.kcal === null)
+  }
+  return ingredients.filter((i) => i.category_1 === selectedCategory)
+}, [ingredients, selectedCategory])
+
+const selectedDateRows = useMemo(() => {
+  return intakeRows.filter((row) => row.date === date)
+}, [intakeRows, date])
+
+const groupedTodayRows = useMemo(() => {
+  const grouped: any[] = []
+
+  selectedDateRows.forEach((row) => {
+    const isOverigRow = row.kcal_overig !== null
+
+    if (isOverigRow) {
+      grouped.push({
+        ...row,
+        displayQuantity: Number(row.quantity),
+        displayKcalPerUnit: Number(row.kcal_overig),
+        displayKcalTotal: Number(row.quantity) * Number(row.kcal_overig),
+      })
       return
     }
 
-    const updated =
-      selectedSeries.filter(
-        (_, i) => i !== index
-      )
+    const ingredientId = row.ingredient
+    const existing = grouped.find((i) => i.ingredient === ingredientId)
 
-    setSelectedSeries(updated)
+    const kcalPerUnit = Number(row.ingredient_data?.kcal || 0)
+
+    if (existing) {
+      existing.displayQuantity += Number(row.quantity)
+      existing.displayKcalTotal += Number(row.quantity) * kcalPerUnit
+    } else {
+      grouped.push({
+        ...row,
+        displayQuantity: Number(row.quantity),
+        displayKcalPerUnit: kcalPerUnit,
+        displayKcalTotal: Number(row.quantity) * kcalPerUnit,
+      })
+    }
+  })
+
+  return grouped
+}, [selectedDateRows])
+
+const totalKcal = selectedDateRows.reduce((sum, row) => {
+  const kcal =
+    row.kcal_overig !== null
+      ? Number(row.kcal_overig)
+      : Number(row.ingredient_data?.kcal || 0)
+
+  return sum + Number(row.quantity) * kcal
+}, 0)
+
+async function handleSaveMeal() {
+  if (!user) return
+
+  if (!mealName || mealName.trim() === '') {
+    alert('Naam maaltijd is verplicht')
+    return
   }
 
-  function updateSeries(
-    index: number,
-    value: string
-  ) {
+  const validRows = mealRows.filter(
+    (r) => r.ingredient && Number(r.quantity) > 0
+  )
 
-    const updated =
-      [...selectedSeries]
-
-    updated[index] = value
-
-    setSelectedSeries(updated)
+  if (!validRows.length) {
+    alert('Geen geldige regels in maaltijd')
+    return
   }
 
-  const chartData = useMemo(() => {
-
-    return dailyNutritionRows.map(
-      (row) => {
-
-        const dataPoint: any = {
-          date: row.date,
-        }
-
-        selectedSeries.forEach(
-          (series) => {
-
-            if (!series) return
-
-            dataPoint[series] =
-              Number(
-                row[series] || 0
-              )
-          }
-        )
-
-        return dataPoint
+  // 🔥 STEP 1: enrich met ingredient data
+  const enriched = validRows
+    .map((r) => {
+      const ing = ingredients.find((i) => i.id === r.ingredient)
+      if (!ing) return null
+      return {
+        ...ing,
+        quantity: Number(r.quantity),
       }
-    )
-
-  }, [
-    dailyNutritionRows,
-    selectedSeries,
-  ])
-
-  const groupedTodayRows = useMemo(() => {
-
-    const grouped: any[] = []
-
-    todayRows.forEach((row) => {
-
-      const isOverigRow =
-        row.kcal_overig !== null
-
-      // OVERIG NIET GROEPEREN
-
-      if (isOverigRow) {
-
-        grouped.push({
-          ...row,
-          displayQuantity:
-            Number(row.quantity),
-          displayKcalPerUnit:
-            Number(row.kcal_overig),
-          displayKcalTotal:
-            Number(row.quantity) *
-            Number(row.kcal_overig),
-        })
-
-        return
-      }
-
-      const ingredientId =
-        row.ingredient
-
-      const existing =
-        grouped.find(
-          (item) =>
-            item.ingredient ===
-            ingredientId
-        )
-
-      const kcalPerUnit =
-        Number(
-          row.ingredient_data
-            ?.kcal || 0
-        )
-
-      if (existing) {
-
-        existing.displayQuantity +=
-          Number(row.quantity)
-
-        existing.displayKcalTotal +=
-          Number(row.quantity) *
-          kcalPerUnit
-
-      } else {
-
-        grouped.push({
-          ...row,
-          displayQuantity:
-            Number(row.quantity),
-          displayKcalPerUnit:
-            kcalPerUnit,
-          displayKcalTotal:
-            Number(row.quantity) *
-            kcalPerUnit,
-        })
-
-      }
-
     })
+    .filter(Boolean)
 
-    return grouped
+  // 🔥 STEP 2: helper voor null-safe multiplication
+  const sumField = (field: string) => {
+    let hasValue = false
 
-  }, [todayRows])
+    const total = enriched.reduce((sum, i) => {
+      const val = i[field]
 
-  const totalTodayKcal =
-    todayRows.reduce(
-      (sum, row) => {
+      if (val === null || val === undefined) return sum
 
-        const kcal =
-          row.kcal_overig !==
-          null
-            ? Number(
-                row.kcal_overig
-              )
-            : Number(
-                row
-                  .ingredient_data
-                  ?.kcal || 0
-              )
+      hasValue = true
+      return sum + Number(val) * i.quantity
+    }, 0)
 
-        return (
-          sum +
-          Number(row.quantity) *
-            kcal
-        )
+    return hasValue ? total : null
+  }
 
-      },
-      0
-    )
+  // 🔥 STEP 3: build payload (ONLY allowed columns)
+  const payload: any = {
+    ingredient: mealName,
+    category_1: 'Samengestelde maaltijd',
+    user_id: user.id,
+    created_at: new Date().toISOString(),
+  }
+
+  // jouw expliciete kolommenlijst (exact wat jij zei)
+  const fields = [
+    'category_2',
+    'kcal',
+    'fats',
+    'saturated_fats',
+    'proteins',
+    'carbs',
+    'sugars',
+    'cholesterol',
+    'fibers',
+    'salt',
+    'vitamin_a',
+    'vitamin_b1',
+    'vitamin_b2',
+    'vitamin_b3',
+    'vitamin_b6',
+    'vitamin_b11',
+    'vitamin_b12',
+    'vitamin_c',
+    'vitamin_d',
+    'vitamin_e',
+    'vitamin_k',
+    'sodium',
+    'potassium',
+    'calcium',
+    'phosphorus',
+    'iron',
+    'magnesium',
+    'copper',
+    'zinc',
+    'selenium',
+    'iodine',
+    'manganese',
+    'fluorine',
+  ]
+
+  fields.forEach((f) => {
+    payload[f] = sumField(f)
+  })
+
+  // 🔥 STEP 4: INSERT 1 ROW
+  const { error } = await supabase
+    .from('ingredients')
+    .insert([payload])
+
+  if (error) {
+    console.error('MEAL INSERT ERROR:', error)
+    alert(error.message)
+    return
+  }
+
+  alert('Maaltijd succesvol opgeslagen!')
+
+  setMealName('')
+  setMealRows([{ category: '', ingredient: '', quantity: 1 }])
+  setShowMealModal(false)
+
+  loadPage()
+}
 
   return (
     <div className="min-h-screen bg-blue-100 p-6">
-
       <div className="max-w-6xl mx-auto grid gap-6">
 
-        {/* INPUT CONTAINER */}
+        {/* TOP */}
+        <div className="grid md:grid-cols-2 gap-6">
 
-        <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
+          {/* INPUT */}
+          <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
+            <h2 className="text-2xl font-bold mb-6">Nieuwe intake</h2>
 
-          <h2 className="text-2xl font-bold mb-6">
-            Nieuwe intake
-          </h2>
-
-          <form
-            onSubmit={handleSubmit}
-            className="grid md:grid-cols-3 gap-4"
-          >
-
-            <div>
-
-              <label className="block mb-2 font-semibold">
-                Datum
-              </label>
-
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <input
-                type="date"
-                value={date}
-                onChange={(e) =>
-                  setDate(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-xl p-3"
-                required
-              />
+  type="date"
+  value={date}
+  onChange={(e) => setDate(e.target.value)}
+  className="block w-full min-w-0 max-w-full border rounded-xl p-3"
+  required
+/>
 
-            </div>
+              <select value={selectedCategory}
+                onChange={(e) => {
+  const value = e.target.value
+  setSelectedCategory(value)
+  setIngredientId('')
 
-            <div>
-
-              <label className="block mb-2 font-semibold">
-                Ingredient
-              </label>
-
-              <select
-                value={ingredientId}
-                onChange={(e) =>
-                  setIngredientId(
-                    e.target.value
-                  )
-                }
+  if (value === 'Overig') {
+    setQuantity('1')
+  }
+}}
                 className="w-full border rounded-xl p-3"
                 required
               >
-
-                <option value="">
-                  Selecteer ingredient
-                </option>
-
-                {ingredients.map(
-                  (ingredient) => (
-                    <option
-                      key={ingredient.id}
-                      value={ingredient.id}
-                    >
-                      {
-                        ingredient.ingredient
-                      }
-                    </option>
-                  )
-                )}
-
+                <option value="">Selecteer categorie</option>
+                {intakeCategories.map(cat => (
+  <option key={cat} value={cat}>{cat}</option>
+))}
               </select>
 
-            </div>
+              {selectedCategory !== 'Overig' && (
+  <select
+    value={ingredientId}
+    onChange={(e) => setIngredientId(e.target.value)}
+    className="w-full border rounded-xl p-3"
+    required
+  >
+    <option value="">Selecteer ingredient</option>
+    {filteredIngredients.map((i) => (
+      <option key={i.id} value={i.id}>
+        {i.ingredient}
+      </option>
+    ))}
+  </select>
+)}
 
-            <div>
+              {selectedCategory === 'Overig' ? (
+  <input
+    type="number"
+    value={1}
+    disabled
+    className="w-full border rounded-xl p-3 bg-gray-100"
+  />
+) : (
+  <input
+    type="number"
+    value={quantity}
+    onChange={(e) => setQuantity(e.target.value)}
+    className="w-full border rounded-xl p-3"
+    required
+  />
+)}
 
-              <label className="block mb-2 font-semibold">
-                Quantity
-              </label>
-
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) =>
-                  setQuantity(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-xl p-3"
-                required
-              />
-
-            </div>
-
-            {isOverig && (
-
-              <div>
-
-                <label className="block mb-2 font-semibold">
-                  Kcal
-                </label>
-
+              {isOverig && (
                 <input
-                  type="number"
-                  value={kcalOverig}
-                  onChange={(e) =>
-                    setKcalOverig(
-                      e.target.value
-                    )
-                  }
-                  className="w-full border rounded-xl p-3"
-                  required
-                />
+  type="number"
+  value={kcalOverig}
+  onChange={(e) => setKcalOverig(e.target.value)}
+  className="w-full border rounded-xl p-3"
+  placeholder="Kcal"
+  required
+/>
+              )}
 
-              </div>
-
-            )}
-
-            <div className="md:col-span-3">
-
-              <button
-                type="submit"
-                className="px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-blue-400 transition"
-              >
+              <button className="px-6 py-3 bg-orange-500 text-white rounded-xl">
                 Opslaan
               </button>
+            </form>
+          </div>
 
+          {/* TOEVOEGEN */}
+          <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
+            <h2 className="text-2xl font-bold mb-6">Toevoegen</h2>
+
+            <div className="flex flex-col gap-4">
+              <button onClick={() => setShowIngredientModal(true)}
+                className="px-4 py-3 bg-orange-500 text-white rounded-xl">
+                Voeg nieuw ingredient toe
+              </button>
+
+              <button onClick={() => setShowMealModal(true)}
+                className="px-4 py-3 bg-orange-500 text-white rounded-xl">
+                Stel je maaltijd samen
+              </button>
             </div>
-
-          </form>
-
+          </div>
         </div>
 
-        {/* TODAY TABLE */}
-
+        {/* TABLE */}
         <div className="bg-white border-2 border-blue-500 rounded-2xl p-6 overflow-x-auto">
-
           <h2 className="text-2xl font-bold mb-6">
-
-            Intake vandaag:
-            {' '}
-            {Math.round(
-              totalTodayKcal
-            )}
-            {' '}
-            kcal
-
+            Intake {date}: {Math.round(totalKcal)} kcal
           </h2>
 
           <table className="w-full border-collapse">
-
             <thead>
-
               <tr className="border-b">
-
-                <th className="text-left p-3">
-                  Ingredient
-                </th>
-
-                <th className="text-left p-3">
-                  Quantity
-                </th>
-
-                <th className="text-left p-3">
-                  Kcal / unit
-                </th>
-
-                <th className="text-left p-3">
-                  Kcal totaal
-                </th>
-
-                <th className="text-left p-3">
-                  Actions
-                </th>
-
+                <th className="text-left p-3">Ingredient</th>
+                <th className="text-left p-3">Quantity</th>
+                <th className="text-left p-3">Kcal / unit</th>
+                <th className="text-left p-3">Kcal totaal</th>
+                <th className="text-left p-3">Actions</th>
               </tr>
-
             </thead>
 
             <tbody>
+              {groupedTodayRows.map((row) => (
+                <tr key={row.id} className="border-b">
+                  <td className="p-3">{row.ingredient_data?.ingredient}</td>
 
-              {groupedTodayRows.map(
-                (row) => {
+                  <td className="p-3">
+                    {editingRowId === row.id ? (
+                      <input
+                        value={editingQuantity}
+                        onChange={(e) => setEditingQuantity(e.target.value)}
+                        className="border p-2 rounded-lg w-20"
+                      />
+                    ) : (
+                      row.displayQuantity
+                    )}
+                  </td>
 
-                  const kcalPerUnit =
-                    row.displayKcalPerUnit
+                  <td className="p-3">{row.displayKcalPerUnit}</td>
+                  <td className="p-3">{row.displayKcalTotal}</td>
 
-                  const kcalTotal =
-                    row.displayKcalTotal
-
-                  return (
-
-                    <tr
-                      key={row.id}
-                      className="border-b"
-                    >
-
-                      <td className="p-3">
-
-                        {
-                          row
-                            .ingredient_data
-                            ?.ingredient
-                        }
-
-                      </td>
-
-                      <td className="p-3">
-
-                        {editingRowId ===
-                        row.id ? (
-
-                          <input
-                            type="number"
-                            value={
-                              editingQuantity
-                            }
-                            onChange={(e) =>
-                              setEditingQuantity(
-                                e.target.value
-                              )
-                            }
-                            className="border rounded-lg p-2 w-24"
-                          />
-
-                        ) : (
-                          row.displayQuantity
-                        )}
-
-                      </td>
-
-                      <td className="p-3">
-                        {kcalPerUnit}
-                      </td>
-
-                      <td className="p-3">
-                        {kcalTotal}
-                      </td>
-
-                      <td className="p-3">
-
-                        <div className="flex gap-2">
-
-                          {editingRowId ===
-                          row.id ? (
-
-                            <button
-                              onClick={() =>
-                                handleEditSave(
-                                  row.id
-                                )
-                              }
-                              className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition"
-                            >
-                              <Save size={18} />
-                            </button>
-
-                          ) : (
-
-                            <button
-                              onClick={() => {
-
-                                setEditingRowId(
-                                  row.id
-                                )
-
-                                setEditingQuantity(
-                                  row.displayQuantity.toString()
-                                )
-
-                              }}
-                              className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition"
-                            >
-                              <Pencil size={18} />
-                            </button>
-
-                          )}
-
-                          <button
-                            onClick={() =>
-                              handleDelete(
-                                row.id
-                              )
-                            }
-                            className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-400 transition"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-
-                  )
-                }
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-        {/* CHART CONTROLS */}
-
-        <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
-
-          <div className="flex items-center justify-between mb-6">
-
-            <h2 className="text-2xl font-bold">
-              Chart controls
-            </h2>
-
-            <button
-              type="button"
-              onClick={addSeries}
-              className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-blue-400 transition"
-            >
-              + Series
-            </button>
-
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-4">
-
-            {selectedSeries.map(
-              (
-                selected,
-                index
-              ) => (
-
-                <div
-                  key={index}
-                  className="border rounded-xl p-3"
-                >
-
-                  <div className="flex items-center justify-between mb-2">
-
-                    <label className="font-semibold">
-
-                      Series {index + 1}
-
-                    </label>
-
-                    {selectedSeries.length >
-                      2 && (
+                  <td className="p-3">
+                    <div className="flex gap-2">
+                      {editingRowId === row.id ? (
+                        <button
+                          onClick={() => handleEditSave(row.id)}
+                          className="p-2 bg-orange-500 text-white rounded-lg"
+                        >
+                          <Save size={18} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setEditingRowId(row.id)
+                            setEditingQuantity(row.displayQuantity)
+                          }}
+                          className="p-2 bg-orange-500 text-white rounded-lg"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                      )}
 
                       <button
-                        type="button"
-                        onClick={() =>
-                          removeSeries(
-                            index
-                          )
-                        }
-                        className="text-red-500 font-bold"
+                        onClick={() => handleDelete(row.id)}
+                        className="p-2 bg-orange-500 text-white rounded-lg"
                       >
-                        ×
+                        <Trash2 size={18} />
                       </button>
-
-                    )}
-
-                  </div>
-
-                  <select
-                    value={selected}
-                    onChange={(e) =>
-                      updateSeries(
-                        index,
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-xl p-3"
-                  >
-
-                    <option value="">
-                      Geen
-                    </option>
-
-                    {selectableFields.map(
-                      (field) => (
-                        <option
-                          key={field}
-                          value={field}
-                        >
-                          {field}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-              )
-            )}
-
-          </div>
-
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        {/* CHART */}
-
-        <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
-
-          <h2 className="text-2xl font-bold mb-6">
-            Grafiek
-          </h2>
-
-          <div className="w-full h-[500px]">
-
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-            >
-
-              <LineChart
-                data={chartData}
-              >
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
-                <XAxis
-                  dataKey="date"
-                />
-
-                <YAxis />
-
-                <Tooltip />
-
-                {selectedSeries.map(
-                  (
-                    series,
-                    index
-                  ) => {
-
-                    if (!series)
-                      return null
-
-                    return (
-                      <Line
-                        key={
-                          series +
-                          index
-                        }
-                        type="monotone"
-                        dataKey={series}
-                        name={series}
-                        stroke={
-                          lineColors[
-                            index %
-                              lineColors.length
-                          ]
-                        }
-                        strokeWidth={3}
-                      />
-                    )
-                  }
-                )}
-
-              </LineChart>
-
-            </ResponsiveContainer>
-
-          </div>
-
-        </div>
-
       </div>
 
+{/* ---------------- MODAL 1 ---------------- */}
+{showIngredientModal && (
+  <div className="fixed inset-0 z-[99999] bg-black/50 flex items-center justify-center">
+    <div className="bg-white p-6 rounded-2xl w-[600px] max-h-[80vh] overflow-y-auto relative">
+
+      {/* CLOSE */}
+      <button
+        onClick={() => setShowIngredientModal(false)}
+        className="absolute top-3 right-3 text-xl"
+      >
+        ✕
+      </button>
+
+      <h2 className="text-xl font-bold mb-4">Nieuw ingredient</h2>
+
+      <div className="flex flex-col gap-3">
+
+        {/* ---------------- INGREDIENT NAAM ---------------- */}
+        <div className="flex items-center gap-3">
+          <label className="w-1/2">Ingredient naam</label>
+          <input
+            className="border p-2 rounded-lg w-full"
+            placeholder="Verplicht veld"
+            value={newIngredient.ingredient || ''}
+            onChange={(e) =>
+              setNewIngredient({
+                ...newIngredient,
+                ingredient: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        {/* ---------------- CATEGORIE ---------------- */}
+        <div className="flex items-center gap-3">
+          <label className="w-1/2">Categorie</label>
+          <select
+            className="border p-2 rounded-lg w-full"
+            value={newIngredient.category_1 || ''}
+            onChange={(e) =>
+              setNewIngredient({
+                ...newIngredient,
+                category_1: e.target.value,
+              })
+            }
+          >
+            <option value="">Verplicht veld</option>
+            <option value="Eten">Eten</option>
+            <option value="Drinken">Drinken</option>
+          </select>
+        </div>
+
+        {/* ---------------- REST VAN DE VELDEN ---------------- */}
+        {nutritionFields
+          .filter(f => f.field_name !== 'user_id')
+          .map((f) => {
+            const isRequired = f.field_name === 'kcal'
+
+            return (
+              <div key={f.field_name} className="flex items-center gap-3">
+
+                <label className="w-1/2">
+                  {f.display_name_nl}
+                </label>
+
+                <input
+                  className="border p-2 rounded-lg w-full"
+                  placeholder={isRequired ? 'Verplicht veld' : 'Optioneel veld'}
+                  value={newIngredient[f.field_name] || ''}
+                  onChange={(e) =>
+                    setNewIngredient({
+                      ...newIngredient,
+                      [f.field_name]: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            )
+          })}
+
+        <button
+          onClick={handleSaveIngredient}
+          className="mt-4 bg-orange-500 text-white p-3 rounded-xl"
+        >
+          Opslaan
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* ---------------- MODAL 2 ---------------- */}
+      {showMealModal && (
+        <div className="fixed inset-0 z-[99999] bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-2xl w-[700px] max-h-[80vh] overflow-y-auto relative">
+
+            {/* CLOSE */}
+            <button
+              onClick={() => setShowMealModal(false)}
+              className="absolute top-3 right-3 text-xl"
+            >
+              ✕
+            </button>
+
+            <h2 className="text-xl font-bold mb-4">Maaltijd samenstellen</h2>
+
+            <input
+              className="w-full border p-2 rounded-lg mb-4"
+              placeholder="Naam maaltijd"
+              value={mealName}
+              onChange={(e) => setMealName(e.target.value)}
+            />
+
+            {mealRows.map((row, idx) => (
+              <div key={idx} className="grid grid-cols-3 gap-2 mb-2">
+                <select
+                  value={row.category}
+                  onChange={(e) => {
+                    const copy = [...mealRows]
+                    copy[idx].category = e.target.value
+                    copy[idx].ingredient = ''
+                    setMealRows(copy)
+                  }}
+                  className="border p-2 rounded-lg"
+                >
+                  <option value="">Categorie</option>
+                  {mealCategories.map(cat => (
+  <option key={cat} value={cat}>{cat}</option>
+))}
+                </select>
+
+                <select
+                  value={row.ingredient}
+                  onChange={(e) => {
+                    const copy = [...mealRows]
+                    copy[idx].ingredient = e.target.value
+                    setMealRows(copy)
+                  }}
+                  className="border p-2 rounded-lg"
+                >
+                  <option value="">Ingredient</option>
+                  {ingredients
+                    .filter((i) =>
+                      row.category ? i.category_1 === row.category : true
+                    )
+                    .map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.ingredient}
+                      </option>
+                    ))}
+                </select>
+
+                <input
+                  type="number"
+                  value={row.quantity}
+                  onChange={(e) => {
+                    const copy = [...mealRows]
+                    copy[idx].quantity = e.target.value
+                    setMealRows(copy)
+                  }}
+                  className="border p-2 rounded-lg"
+                />
+              </div>
+            ))}
+
+            <button
+              onClick={() =>
+                setMealRows([
+                  ...mealRows,
+                  { category: '', ingredient: '', quantity: 1 },
+                ])
+              }
+              className="mt-2 text-sm text-blue-600"
+            >
+              + regel toevoegen
+            </button>
+
+            <button
+              onClick={handleSaveMeal}
+              className="mt-4 bg-orange-500 text-white p-3 rounded-xl w-full"
+            >
+              Opslaan maaltijd
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

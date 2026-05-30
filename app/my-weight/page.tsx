@@ -85,7 +85,7 @@ export default function MyWeightPage() {
 
   const defaultEnd = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 14);
+    d.setDate(d.getDate());
     return d.toISOString().split("T")[0];
   }, []);
 
