@@ -33,8 +33,8 @@ export default function MyIntakePage() {
   // MEAL BUILDER STATE
   const [mealName, setMealName] = useState('')
   const [mealRows, setMealRows] = useState([
-    { category: '', ingredient: '', quantity: 1 },
-  ])
+  { category: '', ingredient: '', quantity: 1 as number },
+])
 
   const selectedIngredient = ingredients.find((i) => i.id === ingredientId)
   const isOverig = selectedIngredient && selectedIngredient.kcal === null
@@ -737,15 +737,15 @@ async function handleSaveMeal() {
                 </select>
 
                 <input
-                  type="number"
-                  value={row.quantity}
-                  onChange={(e) => {
-                    const copy = [...mealRows]
-                    copy[idx].quantity = e.target.value
-                    setMealRows(copy)
-                  }}
-                  className="border p-2 rounded-lg"
-                />
+  type="number"
+  value={row.quantity}
+  onChange={(e) => {
+    const copy = [...mealRows]
+    copy[idx].quantity = Number(e.target.value)
+    setMealRows(copy)
+  }}
+  className="border p-2 rounded-lg"
+/>
               </div>
             ))}
 
