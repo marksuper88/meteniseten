@@ -496,17 +496,10 @@ async function handleSaveMeal() {
 
 {/* Mijn ingredienten */}
 <div className="bg-white border-2 border-blue-500 rounded-2xl p-6">
-  <h2 className="text-2xl font-bold mb-6">Mijn ingredienten</h2>
+  <h2 className="text-2xl font-bold mb-6">Toevoegen</h2>
 
   <div className="flex flex-col gap-4">
     
-    <Link
-      href="/my-ingredients"
-      className="px-4 py-3 bg-orange-500 text-white rounded-xl text-center"
-    >
-      Bekijk mijn ingredienten
-    </Link>
-
     <button
       onClick={() => setShowIngredientModal(true)}
       className="px-4 py-3 bg-orange-500 text-white rounded-xl"
@@ -614,14 +607,7 @@ async function handleSaveMeal() {
   ))}
 </tbody>
           </table>
-          <div className="mt-4 flex justify-center">
-  <a
-    href="/my-nutrition"
-    className="bg-orange-500 text-white px-6 py-3 rounded-xl w-full md:w-auto text-center"
-  >
-    Bekijk je voedingswaarden dashboard
-  </a>
-</div>
+          
         </div>
       </div>
 
